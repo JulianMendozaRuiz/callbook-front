@@ -1,0 +1,43 @@
+<form
+  class="flex flex-col gap-6 justify-self-center min-w-xl max-w-xl"
+  [formGroup]="callForm"
+>
+  <div class="flex flex-col gap-2">
+    <label for="name">Username:</label>
+    <input
+      id="name"
+      type="text"
+      placeholder="Enter a username"
+      formControlName="username"
+      class="mb-2 p-2 border rounded"
+    />
+  </div>
+
+  <div class="flex flex-col gap-2">
+    <label for="callId">Call id:</label>
+    <input
+      id="callId"
+      type="text"
+      placeholder="Please enter the call id"
+      formControlName="callId"
+      class="mb-2 p-2 border rounded"
+    />
+  </div>
+
+  <div class="flex flex-row gap-x-4">
+    <button
+      [disabled]="!callForm.valid"
+      (click)="createCall()"
+      class="bg-blue-500 in-active:bg-blue-100 hover:bg-blue-600 active:bg-blue-800 cursor-pointer text-white p-2 rounded px-8"
+    >
+      New Call
+    </button>
+    <button
+      [disabled]="!callForm.valid"
+      (click)="joinCall()"
+      class="bg-blue-500 in-active:bg-blue-100 hover:bg-blue-600 active:bg-blue-800 cursor-pointer text-white p-2 rounded px-8"
+    >
+      Join Call
+    </button>
+  </div>
+</form>
