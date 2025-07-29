@@ -2,37 +2,69 @@
   class="flex flex-col gap-6 justify-self-center min-w-xl max-w-xl"
   [formGroup]="callForm"
 >
-  <div class="flex flex-col gap-2">
-    <label for="name">Username:</label>
+  <div class="flex flex-col">
+    <label for="name">Username: <span class="text-red-500">*</span></label>
     <input
       id="name"
       type="text"
       placeholder="Enter a username"
       formControlName="username"
       class="mb-2 p-2 border rounded"
+      [class.border-red-500]="
+        callForm.get('username')?.invalid && callForm.get('username')?.touched
+      "
     />
+    <div
+      *ngIf="
+        callForm.get('username')?.errors && callForm.get('username')?.touched
+      "
+      class="text-red-500 text-sm"
+    >
+      <div *ngIf="callForm.get('username')?.errors?.['required']">
+        Username is required
+      </div>
+      <div *ngIf="callForm.get('username')?.errors?.['minlength']">
+        Username must be at least 3 characters
+      </div>
+    </div>
   </div>
 
-  <div class="flex flex-col gap-2">
+  <div class="flex flex-col">
     <label for="callId">Call id:</label>
     <input
       id="callId"
       type="text"
-      placeholder="Please enter the call id"
+      placeholder="Please enter the call id (6 characters)"
       formControlName="callId"
       class="mb-2 p-2 border rounded"
+      [class.border-red-500]="
+        callForm.get('callId')?.errors?.['callIdLength'] && callForm.get('callId')?.touched
+      "
     />
+    <div
+      *ngIf="callForm.get('callId')?.errors?.['callIdLength'] && callForm.get('callId')?.touched"
+      class="text-red-500 text-sm"
+    >
+      <div *ngIf="callForm.get('callId')?.errors?.['callIdLength']">
+        Call ID must be exactly 6 characters
+      </div>
+    </div>
   </div>
 
   <div class="flex flex-row gap-x-16">
     <button
-      [disabled]="!callForm.valid"
+      [disabled]="!callForm.get('username')?.valid"
       (click)="createCall()"
       class="bg-blue-500 disabled:bg-blue-300 disabled:cursor-default enabled:cursor-pointer active:bg-blue-700 enabled:active:scale-95 transition-all duration-150 ease-in-out text-white p-2 rounded px-8"
     >
       New Call
     </button>
     <button
+      [disabled]="
+        !callForm.get('username')?.valid ||
+        !callForm.get('callId')?.valid ||
+        !callForm.get('callId')?.value?.trim()
+      "
       (click)="joinCall()"
       class="bg-blue-500 disabled:bg-blue-300 disabled:cursor-default enabled:cursor-pointer active:bg-blue-700 enabled:active:scale-95 transition-all duration-150 ease-in-out text-white p-2 rounded px-8"
     >

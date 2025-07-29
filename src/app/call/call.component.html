@@ -1,0 +1,56 @@
+<div class="min-h-screen bg-gray-100">
+  <!-- Meeting Room Container -->
+  <div class="w-full h-full p-6">
+    <!-- Title -->
+    <h1 class="text-3xl font-bold mb-4 text-center">
+      Meeting room: {{ callId }}
+    </h1>
+
+    <!-- Control Buttons -->
+    <div class="flex justify-center space-x-4 mb-8">
+      <button
+        (click)="leaveCall()"
+        class="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 hover:cursor-pointer active:bg-red-700 transition-colors"
+      >
+        Leave
+      </button>
+      <button
+        class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 hover:cursor-pointer active:bg-blue-700 transition-colors"
+      >
+        Toggle mic
+      </button>
+      <button
+        class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 hover:cursor-pointer active:bg-blue-700 transition-colors"
+      >
+        Toggle video
+      </button>
+      <button
+        (click)="toggleTranscript()"
+        class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 hover:cursor-pointer active:bg-blue-700 transition-colors"
+      >
+        {{ showTranscript ? "Hide" : "Show" }} transcript
+      </button>
+    </div>
+
+    <!-- Users Grid -->
+    <div class="flex w-full justify-center space-x-12 px-32">
+      <app-user-call
+        userName="User 1"
+        [isMicOn]="true"
+        [isCameraOn]="true"
+        [showTranscript]="showTranscript"
+        class="flex-1"
+      >
+      </app-user-call>
+
+      <app-user-call
+        userName="User 2"
+        [isMicOn]="true"
+        [isCameraOn]="true"
+        [showTranscript]="showTranscript"
+        class="flex-1"
+      >
+      </app-user-call>
+    </div>
+  </div>
+</div>

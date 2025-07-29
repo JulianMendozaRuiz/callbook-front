@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { FormControl, FormGroup, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'comp-home',
@@ -16,9 +17,13 @@ export class HomeComponent {
     callId: new FormControl('', [Validators.required, Validators.minLength(5)]),
   });
 
+  constructor(private router: Router) {}
+
   joinCall() {
-    // Logic to join a call
-    console.log('Joining call...');
+    if (this.callForm.valid) {
+      const callId = this.callForm.get('callId')?.value;
+      this.router.navigate(['/call', callId]);
+    }
   }
 
   createCall() {
