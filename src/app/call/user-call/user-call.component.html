@@ -4,9 +4,21 @@
 
   <!-- Video Area -->
   <div
-    class="w-full h-80 bg-gray-300 border-2 border-gray-400 flex items-center justify-center rounded-lg"
+    class="w-full h-80 bg-gray-300 border-2 border-gray-400 flex items-center justify-center rounded-lg relative overflow-hidden"
   >
-    <span class="text-gray-600 text-xl">Video Feed</span>
+    <video
+      #videoElement
+      class="w-full h-full object-cover"
+      autoplay
+      muted
+      playsinline
+    ></video>
+    <span
+      *ngIf="!isCameraOn"
+      class="absolute inset-0 flex items-center justify-center text-gray-600 text-xl bg-gray-300"
+    >
+      Video Feed Disabled
+    </span>
   </div>
 
   <!-- Mic and Camera Status Icons -->

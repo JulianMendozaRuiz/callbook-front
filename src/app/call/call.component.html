@@ -34,20 +34,38 @@
 
     <!-- Users Grid -->
     <div class="flex w-full justify-center space-x-12 px-32">
+      <!-- Local User -->
       <app-user-call
-        userName="User 1"
+        [userName]="currentUsername"
         [isMicOn]="true"
         [isCameraOn]="true"
         [showTranscript]="showTranscript"
+        [isLocalUser]="true"
         class="flex-1"
       >
       </app-user-call>
 
+      <!-- Remote Users -->
       <app-user-call
-        userName="User 2"
+        *ngFor="let participant of remoteParticipants; let i = index"
+        [userName]="participant.name || participant.identity"
+        [participantIdentity]="participant.identity"
         [isMicOn]="true"
         [isCameraOn]="true"
         [showTranscript]="showTranscript"
+        [isLocalUser]="false"
+        class="flex-1"
+      >
+      </app-user-call>
+
+      <!-- Placeholder for when no remote users -->
+      <app-user-call
+        *ngIf="remoteParticipants.length === 0"
+        userName="Waiting for others..."
+        [isMicOn]="false"
+        [isCameraOn]="false"
+        [showTranscript]="showTranscript"
+        [isLocalUser]="false"
         class="flex-1"
       >
       </app-user-call>

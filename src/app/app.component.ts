@@ -10,9 +10,5 @@ import { environment } from '../environments/environment';
 export class AppComponent {
   title = 'callbook-front';
 
-  constructor() {
-    // Print  environment variables to console
-    console.log('Environment Variables:');
-    console.log('API URL:', environment);
-  }
+  constructor() {}
 }
