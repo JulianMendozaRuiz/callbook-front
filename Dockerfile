@@ -15,11 +15,18 @@ COPY . .
 # Build the application for production
 RUN npm run build:prod
 
+# Debug: List what was built
+RUN ls -la dist/
+RUN ls -la dist/callbook-front/ || echo "callbook-front directory not found"
+
 # Use nginx to serve the built application
 FROM nginx:alpine
 
 # Copy the built application from the build stage
 COPY --from=build /app/dist/callbook-front /usr/share/nginx/html
+
+# Debug: Check what files are copied
+RUN ls -la /usr/share/nginx/html/
 
 # Remove default nginx config and create custom one
 RUN rm /etc/nginx/conf.d/default.conf && \
