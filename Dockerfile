@@ -1,5 +1,5 @@
-# Uses node:18 as the base image
-FROM node:20-alpine
+# Uses node:20 as the base image
+FROM node:20-alpine AS build
 
 # Set the working directory inside the container
 WORKDIR /app
@@ -12,9 +12,39 @@ RUN npm ci
 # Copy the rest of the application code
 COPY . .
 
-# Expose the port the app runs on
-ENV PORT=4200
-EXPOSE 4200
+# Build the application for production
+RUN npm run build:prod
 
-# Start the application
-CMD ["npm", "start", "--", "--host", "0.0.0.0"]
+# Use nginx to serve the built application
+FROM nginx:alpine
+
+# Copy the built application from the build stage
+COPY --from=build /app/dist/callbook-front /usr/share/nginx/html
+
+# Configure nginx for Angular SPA
+RUN echo 'server { \
+    listen 80; \
+    server_name localhost; \
+    root /usr/share/nginx/html; \
+    index index.html; \
+    location / { \
+        try_files $uri $uri/ /index.html; \
+    } \
+    # Cache static assets with versioned filenames \
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ { \
+        expires 1y; \
+        add_header Cache-Control "public, immutable"; \
+    } \
+    # Don'\''t cache index.html \
+    location = /index.html { \
+        add_header Cache-Control "no-cache, no-store, must-revalidate"; \
+        add_header Pragma "no-cache"; \
+        add_header Expires "0"; \
+    } \
+}' > /etc/nginx/conf.d/default.conf
+
+# Expose the port the app runs on
+EXPOSE 80
+
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]
