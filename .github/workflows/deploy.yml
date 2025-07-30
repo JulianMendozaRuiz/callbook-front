@@ -1,0 +1,42 @@
+name: Deploy Frontend to EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1 - Checkout repository (for reference, not used for build)
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Step 2 - Set up SSH for EC2
+      - name: Configure SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/ec2_key.pem
+          chmod 600 ~/.ssh/ec2_key.pem
+
+      # Step 3 - Connect to EC2, pull latest frontend code, rebuild & restart container
+      - name: Deploy Frontend to EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            # Navigate to frontend repo
+            cd /apps/callbook-proxy/callbook-front
+
+            # Ensure repo is on main branch and up to date
+            git fetch origin
+            git checkout main
+            git reset --hard origin/main
+
+            # Go back to parent folder for docker-compose
+            cd ..
+
+            # Rebuild and restart only the frontend service
+            docker compose build frontend
+            docker compose up -d frontend
+          EOF
