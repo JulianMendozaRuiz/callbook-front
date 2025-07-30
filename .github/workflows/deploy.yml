@@ -38,6 +38,6 @@ jobs:
             git checkout main
             git reset --hard origin/main
             cd ..
-            docker compose build frontend
+            docker compose build --no-cache frontend
             docker compose up -d frontend
           EOF
