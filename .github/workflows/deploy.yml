@@ -15,12 +15,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Step 2 - Setup SSH Key (handling pipe format)
+      # Step 2 - Setup SSH Key from base64 (Linux uses -d)
       - name: Setup SSH Key
         run: |
           mkdir -p ~/.ssh
-          # Remove the pipe character and save the key
-          echo "${{ secrets.EC2_SSH_KEY }}" | sed '1d' > ~/.ssh/id_rsa
+          echo "${{ secrets.EC2_SSH_KEY }}" | base64 -d > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           # Verify key format
           ssh-keygen -l -f ~/.ssh/id_rsa
@@ -28,24 +27,20 @@ jobs:
       # Step 3 - Test SSH Connection
       - name: Test SSH Connection
         run: |
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@ec2-3-144-227-127.us-east-2.compute.amazonaws.com "echo 'SSH connection successful'"
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "echo 'SSH connection successful'"
 
-      # Step 4 - Deploy to EC2
-      - name: Deploy Frontend to EC2
-        run: |
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@ec2-3-144-227-127.us-east-2.compute.amazonaws.com << 'EOF'
-            # Navigate to frontend repo
+      # Step 4 - Deploy to EC2 via SSH
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
             cd /apps/callbook-proxy/callbook-front
-
-            # Ensure repo is on main branch and up to date
             git fetch origin
             git checkout main
             git reset --hard origin/main
-
-            # Go back to parent folder for docker-compose
             cd ..
-
-            # Rebuild and restart only the frontend service
             docker compose build frontend
             docker compose up -d frontend
-          EOF
