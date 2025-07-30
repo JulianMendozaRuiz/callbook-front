@@ -37,8 +37,6 @@ jobs:
             git fetch origin
             git checkout main
             git reset --hard origin/main
-            # Build for production with cache busting
-            npm run build:prod
             cd ..
             docker compose build --no-cache frontend
             docker compose up -d frontend

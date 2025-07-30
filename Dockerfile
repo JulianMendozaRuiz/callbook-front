@@ -22,29 +22,35 @@ FROM nginx:alpine
 COPY --from=build /app/dist/callbook-front /usr/share/nginx/html
 
 # Remove default nginx config and create custom one
-RUN rm /etc/nginx/conf.d/default.conf
+RUN rm /etc/nginx/conf.d/default.conf && \
+    rm /etc/nginx/nginx.conf
 
-# Configure nginx for Angular SPA
-RUN echo 'server { \
-    listen 4200; \
-    server_name localhost; \
-    root /usr/share/nginx/html; \
-    index index.html; \
-    location / { \
-        try_files $uri $uri/ /index.html; \
+# Create custom nginx configuration
+RUN echo 'events { \
+    worker_connections 1024; \
+} \
+http { \
+    include /etc/nginx/mime.types; \
+    default_type application/octet-stream; \
+    server { \
+        listen 4200; \
+        server_name localhost; \
+        root /usr/share/nginx/html; \
+        index index.html; \
+        location / { \
+            try_files $uri $uri/ /index.html; \
+        } \
+        location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ { \
+            expires 1y; \
+            add_header Cache-Control "public, immutable"; \
+        } \
+        location = /index.html { \
+            add_header Cache-Control "no-cache, no-store, must-revalidate"; \
+            add_header Pragma "no-cache"; \
+            add_header Expires "0"; \
+        } \
     } \
-    # Cache static assets with versioned filenames \
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ { \
-        expires 1y; \
-        add_header Cache-Control "public, immutable"; \
-    } \
-    # Don'\''t cache index.html \
-    location = /index.html { \
-        add_header Cache-Control "no-cache, no-store, must-revalidate"; \
-        add_header Pragma "no-cache"; \
-        add_header Expires "0"; \
-    } \
-}' > /etc/nginx/conf.d/default.conf
+}' > /etc/nginx/nginx.conf
 
 # Expose the port the app runs on
 EXPOSE 4200
