@@ -15,16 +15,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Step 2 - Setup SSH Agent
-      - name: Setup SSH Agent
-        uses: webfactory/ssh-agent@v0.8.0
-        with:
-          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+      # Step 2 - Setup SSH Key (handling pipe format)
+      - name: Setup SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          # Remove the pipe character and save the key
+          echo "${{ secrets.EC2_SSH_KEY }}" | sed '1d' > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          # Verify key format
+          ssh-keygen -l -f ~/.ssh/id_rsa
 
-      # Step 3 - Deploy to EC2 (using hardcoded host)
+      # Step 3 - Test SSH Connection
+      - name: Test SSH Connection
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@ec2-3-144-227-127.us-east-2.compute.amazonaws.com "echo 'SSH connection successful'"
+
+      # Step 4 - Deploy to EC2
       - name: Deploy Frontend to EC2
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@ec2-3-144-227-127.us-east-2.compute.amazonaws.com << 'EOF'
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@ec2-3-144-227-127.us-east-2.compute.amazonaws.com << 'EOF'
             # Navigate to frontend repo
             cd /apps/callbook-proxy/callbook-front
 
