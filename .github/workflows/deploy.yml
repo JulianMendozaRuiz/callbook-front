@@ -31,12 +31,8 @@ jobs:
 
       # Step 4 - Deploy to EC2 via SSH
       - name: Deploy to EC2 via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
             cd /apps/callbook-proxy/callbook-front
             git fetch origin
             git checkout main
@@ -44,3 +40,4 @@ jobs:
             cd ..
             docker compose build frontend
             docker compose up -d frontend
+          EOF
