@@ -23,7 +23,7 @@ RUN ls -la dist/callbook-front/ || echo "callbook-front directory not found"
 FROM nginx:alpine
 
 # Copy the built application from the build stage
-COPY --from=build /app/dist/callbook-front /usr/share/nginx/html
+COPY --from=build /app/dist/callbook-front/browser /usr/share/nginx/html
 
 # Debug: Check what files are copied
 RUN ls -la /usr/share/nginx/html/
