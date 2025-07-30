@@ -31,13 +31,25 @@ jobs:
 
       # Step 4 - Deploy to EC2 via SSH
       - name: Deploy to EC2 via SSH
+        env:
+          API_URL: ${{ vars.API_URL }}
+          LIVEKIT_URL: ${{ vars.LIVEKIT_URL }}
+          APP_NAME: ${{ vars.APP_NAME }}
+          APP_VERSION: ${{ vars.APP_VERSION }}
         run: |
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
             cd /apps/callbook-proxy/callbook-front
             git fetch origin
             git checkout main
             git reset --hard origin/main
+            
             cd ..
-            docker compose build --no-cache frontend
+            # Build with environment variables passed as build args
+            docker compose build --no-cache \
+              --build-arg API_URL="$API_URL" \
+              --build-arg LIVEKIT_URL="$LIVEKIT_URL" \
+              --build-arg APP_NAME="$APP_NAME" \
+              --build-arg APP_VERSION="$APP_VERSION" \
+              frontend
             docker compose up -d frontend
           EOF

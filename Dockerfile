@@ -4,6 +4,7 @@ FROM node:20-alpine AS build
 # Set the working directory inside the container
 WORKDIR /app
 
+# Copy package files
 COPY package*.json ./
 
 # Install dependencies
@@ -11,6 +12,21 @@ RUN npm ci
 
 # Copy the rest of the application code
 COPY . .
+
+# Define build arguments for environment variables with secure defaults
+ARG API_URL=http://localhost/api
+ARG LIVEKIT_URL=wss://test.livekit.cloud
+ARG APP_NAME=CallBook AI
+ARG APP_VERSION=1.0.0
+
+# Create environment file for production build
+RUN echo "export const environment = { \
+  production: true, \
+  apiUrl: '${API_URL}', \
+  livekitUrl: '${LIVEKIT_URL}', \
+  appName: '${APP_NAME}', \
+  version: '${APP_VERSION}' \
+};" > src/environments/environment.prod.ts
 
 # Build the application for production
 RUN npm run build:prod
