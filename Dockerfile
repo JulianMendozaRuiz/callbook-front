@@ -23,7 +23,7 @@ COPY --from=build /app/dist/callbook-front /usr/share/nginx/html
 
 # Configure nginx for Angular SPA
 RUN echo 'server { \
-    listen 80; \
+    listen 4200; \
     server_name localhost; \
     root /usr/share/nginx/html; \
     index index.html; \
@@ -44,7 +44,7 @@ RUN echo 'server { \
 }' > /etc/nginx/conf.d/default.conf
 
 # Expose the port the app runs on
-EXPOSE 80
+EXPOSE 4200
 
 # Start nginx
 CMD ["nginx", "-g", "daemon off;"]
