@@ -10,28 +10,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1 - Checkout repository (for reference, not used for build)
+      # Step 1 - Checkout repository
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Step 2 - Set up SSH for EC2
-      - name: Configure SSH Key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/ec2_key.pem
-          chmod 600 ~/.ssh/ec2_key.pem
-          # Add EC2 host to known_hosts to avoid host key verification
-          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+      # Step 2 - Setup SSH Agent (more reliable than manual key handling)
+      - name: Setup SSH Agent
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
 
-      # Step 3 - Test SSH connection
-      - name: Test SSH Connection
-        run: |
-          ssh -i ~/.ssh/ec2_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "echo 'SSH connection successful'"
-
-      # Step 4 - Connect to EC2, pull latest frontend code, rebuild & restart container
+      # Step 3 - Deploy to EC2
       - name: Deploy Frontend to EC2
         run: |
-          ssh -i ~/.ssh/ec2_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
             # Navigate to frontend repo
             cd /apps/callbook-proxy/callbook-front
 
