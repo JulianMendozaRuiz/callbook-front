@@ -15,40 +15,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Step 2 - Debug secrets and clean them
-      - name: Debug and clean secrets
-        run: |
-          echo "EC2_HOST length: ${#EC2_HOST}"
-          echo "EC2_USER length: ${#EC2_USER}"
-          echo "EC2_SSH_KEY length: ${#EC2_SSH_KEY}"
-          # Clean the host variable (remove any whitespace)
-          echo "EC2_HOST='$EC2_HOST'"
-          echo "Cleaned host will be used for connection"
-        env:
-          EC2_HOST: ${{ secrets.EC2_HOST }}
-          EC2_USER: ${{ secrets.EC2_USER }}
-          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
-
-      # Step 3 - Setup SSH Agent
+      # Step 2 - Setup SSH Agent
       - name: Setup SSH Agent
         uses: webfactory/ssh-agent@v0.8.0
         with:
           ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
 
-      # Step 4 - Test connection first
-      - name: Test SSH Connection
-        run: |
-          # Clean and test the connection
-          EC2_HOST_CLEAN=$(echo "${{ secrets.EC2_HOST }}" | tr -d '[:space:]')
-          echo "Testing connection to: $EC2_HOST_CLEAN"
-          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ secrets.EC2_USER }}@$EC2_HOST_CLEAN "echo 'Connection successful'"
-
-      # Step 5 - Deploy to EC2
+      # Step 3 - Deploy to EC2 (using hardcoded host)
       - name: Deploy Frontend to EC2
         run: |
-          # Clean the hostname and connect
-          EC2_HOST_CLEAN=$(echo "${{ secrets.EC2_HOST }}" | tr -d '[:space:]')
-          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@$EC2_HOST_CLEAN << 'EOF'
+          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@ec2-3-144-227-127.us-east-2.compute.amazonaws.com << 'EOF'
             # Navigate to frontend repo
             cd /apps/callbook-proxy/callbook-front
 
