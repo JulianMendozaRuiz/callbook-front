@@ -21,6 +21,9 @@ FROM nginx:alpine
 # Copy the built application from the build stage
 COPY --from=build /app/dist/callbook-front /usr/share/nginx/html
 
+# Remove default nginx config and create custom one
+RUN rm /etc/nginx/conf.d/default.conf
+
 # Configure nginx for Angular SPA
 RUN echo 'server { \
     listen 4200; \
