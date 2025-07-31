@@ -26,7 +26,6 @@ export class UserCallComponent implements OnInit, OnDestroy, AfterViewInit {
   @Input() userName: string = '';
   @Input() isMicOn: boolean = true;
   @Input() isCameraOn: boolean = true;
-  @Input() showTranscript: boolean = true;
   @Input() isLocalUser: boolean = false; // New input to distinguish local vs remote user
   @Input() participantIdentity: string = ''; // For remote users to identify specific participant
 

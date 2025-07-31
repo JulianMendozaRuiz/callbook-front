@@ -234,20 +234,32 @@ export class VideocallService {
     }
   }
 
-  // Audio/Video control methods - delegate to TrackManagerService
+  // Audio/Video control methods - delegate to TrackManagerService with room reference
   async enableVideo(): Promise<void> {
-    await this.trackManager.enableVideo();
+    if (!this.roomConnection.room) {
+      throw new Error('Room is not connected');
+    }
+    await this.trackManager.enableVideo(this.roomConnection.room);
   }
 
   async disableVideo(): Promise<void> {
-    await this.trackManager.disableVideo();
+    if (!this.roomConnection.room) {
+      throw new Error('Room is not connected');
+    }
+    await this.trackManager.disableVideo(this.roomConnection.room);
   }
 
   async enableAudio(): Promise<void> {
-    await this.trackManager.enableAudio();
+    if (!this.roomConnection.room) {
+      throw new Error('Room is not connected');
+    }
+    await this.trackManager.enableAudio(this.roomConnection.room);
   }
 
   async disableAudio(): Promise<void> {
-    await this.trackManager.disableAudio();
+    if (!this.roomConnection.room) {
+      throw new Error('Room is not connected');
+    }
+    await this.trackManager.disableAudio(this.roomConnection.room);
   }
 }

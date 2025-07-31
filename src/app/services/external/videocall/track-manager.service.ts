@@ -213,24 +213,76 @@ export class TrackManagerService {
     await localParticipant.setMicrophoneEnabled(false);
   }
 
-  async enableVideo(): Promise<void> {
-    // This method would require access to the room, but we can add it later if needed
-    console.log('Enable video called - implement with room reference');
+  async enableVideo(room: Room): Promise<void> {
+    if (!room) {
+      throw new Error('Room is not initialized');
+    }
+
+    try {
+      const localParticipant = room.localParticipant;
+      await localParticipant.setCameraEnabled(true);
+
+      // Update local video track observable
+      this.captureLocalTracks(localParticipant);
+      console.log('Video enabled for local participant');
+    } catch (error) {
+      console.error('Error enabling video:', error);
+      throw error;
+    }
   }
 
-  async disableVideo(): Promise<void> {
-    // This method would require access to the room, but we can add it later if needed
-    console.log('Disable video called - implement with room reference');
+  async disableVideo(room: Room): Promise<void> {
+    if (!room) {
+      throw new Error('Room is not initialized');
+    }
+
+    try {
+      const localParticipant = room.localParticipant;
+      await localParticipant.setCameraEnabled(false);
+
+      // Clear local video track observable
+      this.localVideoTrack$.next(null);
+      console.log('Video disabled for local participant');
+    } catch (error) {
+      console.error('Error disabling video:', error);
+      throw error;
+    }
   }
 
-  async enableAudio(): Promise<void> {
-    // This method would require access to the room, but we can add it later if needed
-    console.log('Enable audio called - implement with room reference');
+  async enableAudio(room: Room): Promise<void> {
+    if (!room) {
+      throw new Error('Room is not initialized');
+    }
+
+    try {
+      const localParticipant = room.localParticipant;
+      await localParticipant.setMicrophoneEnabled(true);
+
+      // Update local audio track observable
+      this.captureLocalTracks(localParticipant);
+      console.log('Audio enabled for local participant');
+    } catch (error) {
+      console.error('Error enabling audio:', error);
+      throw error;
+    }
   }
 
-  async disableAudio(): Promise<void> {
-    // This method would require access to the room, but we can add it later if needed
-    console.log('Disable audio called - implement with room reference');
+  async disableAudio(room: Room): Promise<void> {
+    if (!room) {
+      throw new Error('Room is not initialized');
+    }
+
+    try {
+      const localParticipant = room.localParticipant;
+      await localParticipant.setMicrophoneEnabled(false);
+
+      // Clear local audio track observable
+      this.localAudioTrack$.next(null);
+      console.log('Audio disabled for local participant');
+    } catch (error) {
+      console.error('Error disabling audio:', error);
+      throw error;
+    }
   }
 
   clearAllTracks(): void {

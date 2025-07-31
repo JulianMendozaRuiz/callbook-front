@@ -15,14 +15,28 @@
         Leave
       </button>
       <button
-        class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 hover:cursor-pointer active:bg-blue-700 transition-colors"
+        (click)="toggleMic()"
+        class="px-6 py-2 text-white rounded-lg hover:cursor-pointer transition-colors"
+        [class.bg-green-500]="isMicOn"
+        [class.hover:bg-green-600]="isMicOn"
+        [class.active:bg-green-700]="isMicOn"
+        [class.bg-red-500]="!isMicOn"
+        [class.hover:bg-red-600]="!isMicOn"
+        [class.active:bg-red-700]="!isMicOn"
       >
-        Toggle mic
+        {{ isMicOn ? "Mute" : "Unmute" }}
       </button>
       <button
-        class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 hover:cursor-pointer active:bg-blue-700 transition-colors"
+        (click)="toggleVideo()"
+        class="px-6 py-2 text-white rounded-lg hover:cursor-pointer transition-colors"
+        [class.bg-green-500]="isCameraOn"
+        [class.hover:bg-green-600]="isCameraOn"
+        [class.active:bg-green-700]="isCameraOn"
+        [class.bg-red-500]="!isCameraOn"
+        [class.hover:bg-red-600]="!isCameraOn"
+        [class.active:bg-red-700]="!isCameraOn"
       >
-        Toggle video
+        {{ isCameraOn ? "Turn off camera" : "Turn on camera" }}
       </button>
       <button
         (click)="toggleTranscript()"
@@ -37,9 +51,8 @@
       <!-- Local User -->
       <app-user-call
         [userName]="currentUsername"
-        [isMicOn]="true"
-        [isCameraOn]="true"
-        [showTranscript]="showTranscript"
+        [isMicOn]="isMicOn"
+        [isCameraOn]="isCameraOn"
         [isLocalUser]="true"
         class="flex-1"
       >
@@ -52,7 +65,6 @@
         [participantIdentity]="participant.identity"
         [isMicOn]="true"
         [isCameraOn]="true"
-        [showTranscript]="showTranscript"
         [isLocalUser]="false"
         class="flex-1"
       >
@@ -64,11 +76,24 @@
         userName="Waiting for others..."
         [isMicOn]="false"
         [isCameraOn]="false"
-        [showTranscript]="showTranscript"
         [isLocalUser]="false"
         class="flex-1"
       >
       </app-user-call>
+    </div>
+
+    <!-- Transcript Section -->
+    <div
+      *ngIf="showTranscript"
+      class="mt-8 p-4 bg-white rounded-lg shadow-md max-h-96 overflow-y-auto"
+    >
+      <h2 class="text-xl font-semibold mb-4">Transcript</h2>
+      <div *ngFor="let message of transcript" class="mb-2">
+        <strong>{{ message.sender }}:</strong> {{ message.text }}
+      </div>
+      <div *ngIf="transcript.length === 0" class="text-gray-500">
+        No messages yet. Start the conversation!
+      </div>
     </div>
   </div>
 </div>

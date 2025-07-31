@@ -39,17 +39,4 @@
       <span class="text-2xl">{{ isCameraOn ? "📹" : "📵" }}</span>
     </div>
   </div>
-
-  <!-- Transcript Area -->
-  <div
-    *ngIf="showTranscript"
-    class="w-full h-40 bg-white border-2 border-gray-400 p-4 rounded-lg shadow-sm"
-  >
-    <p class="text-lg font-medium text-gray-700 mb-2">
-      Transcript {{ userName.split(" ")[1] }}
-    </p>
-    <div class="text-sm text-gray-500 leading-relaxed">
-      <!-- Transcript content will appear here -->
-    </div>
-  </div>
 </div>
