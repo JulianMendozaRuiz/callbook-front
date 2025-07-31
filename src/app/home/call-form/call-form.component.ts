@@ -35,14 +35,15 @@ export class CallFormComponent implements OnInit {
       // Only need valid username to create a new call
       const username = this.callForm.get('username')?.value;
       try {
-        await this.videocallService.createRoomAndJoin(username);
+        // Create and join the room in one operation
+        await this.videocallService.createAndJoinRoom(username);
 
         this.router.navigate([
           '/call',
           this.videocallService.currentCall?.room_id,
         ]);
       } catch (error) {
-        console.error('Error during createRoomAndJoin:', error);
+        console.error('Error during create and join:', error);
       }
     }
   }

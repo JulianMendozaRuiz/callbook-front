@@ -9,7 +9,12 @@ import {
 } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { VideocallService } from '../../services/external/videocall/videocall.service';
-import { LocalVideoTrack, RemoteVideoTrack } from 'livekit-client';
+import {
+  LocalVideoTrack,
+  RemoteVideoTrack,
+  LocalAudioTrack,
+  RemoteAudioTrack,
+} from 'livekit-client';
 
 @Component({
   selector: 'app-user-call',
@@ -28,82 +33,166 @@ export class UserCallComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('videoElement', { static: false })
   videoElement!: ElementRef<HTMLVideoElement>;
 
+  @ViewChild('audioElement', { static: false })
+  audioElement!: ElementRef<HTMLAudioElement>;
+
   private subscriptions: Subscription[] = [];
 
   constructor(private videocallService: VideocallService) {}
 
   ngOnInit() {
-    // Set username based on current call if not provided
+    this.initializeUsername();
+    this.setupTrackSubscriptions();
+  }
+
+  private initializeUsername(): void {
     if (!this.userName && this.isLocalUser) {
       this.userName = this.videocallService.currentCall?.username || 'You';
     }
+  }
 
-    // Subscribe to video track changes
+  private setupTrackSubscriptions(): void {
     if (this.isLocalUser) {
-      const localSub = this.videocallService.localVideoTrack$.subscribe(
-        (track) => {
-          if (track && this.videoElement) {
-            this.attachVideoTrack(track);
-          }
-        }
-      );
-      this.subscriptions.push(localSub);
+      this.setupLocalTrackSubscriptions();
     } else {
-      // For remote users, handle specific participant tracks
-      const remoteSub = this.videocallService.remoteVideoTracks$.subscribe(
-        (tracks) => {
-          console.log(
-            `Remote tracks updated for ${this.userName}. Available tracks:`,
-            Array.from(tracks.keys())
-          );
-          if (this.participantIdentity) {
-            // Get track for specific participant
-            const track = tracks.get(this.participantIdentity);
-            if (track && this.videoElement) {
-              console.log(
-                `Found track for participant ${this.participantIdentity}`
-              );
-              this.attachVideoTrack(track);
-            } else {
-              console.log(
-                `No track found for participant ${this.participantIdentity}`
-              );
-            }
-          } else {
-            // Fallback: Get the first remote track
-            const firstTrack = Array.from(tracks.values())[0];
-            if (firstTrack && this.videoElement) {
-              console.log('Using first available remote track');
-              this.attachVideoTrack(firstTrack);
-            }
-          }
-        }
-      );
-      this.subscriptions.push(remoteSub);
+      this.setupRemoteTrackSubscriptions();
     }
   }
 
-  ngAfterViewInit() {
-    // Try to attach existing tracks after view init
-    if (this.isLocalUser) {
-      const localTrack = this.videocallService.getLocalVideoTrack();
-      if (localTrack) {
-        this.attachVideoTrack(localTrack);
-      }
-    } else {
-      // For remote users, try to attach existing remote tracks
-      const remoteTracks = this.videocallService.getRemoteVideoTracks();
-      if (this.participantIdentity) {
-        const track = remoteTracks.get(this.participantIdentity);
-        if (track) {
+  private setupLocalTrackSubscriptions(): void {
+    const localVideoSub = this.videocallService.localVideoTrack$.subscribe(
+      (track) => {
+        if (track && this.videoElement) {
           this.attachVideoTrack(track);
         }
-      } else {
-        // Fallback: Get the first remote track
-        const firstTrack = Array.from(remoteTracks.values())[0];
-        if (firstTrack) {
-          this.attachVideoTrack(firstTrack);
+      }
+    );
+
+    const localAudioSub = this.videocallService.localAudioTrack$.subscribe(
+      (track) => {
+        if (track && this.audioElement) {
+          this.attachAudioTrack(track);
         }
+      }
+    );
+
+    this.subscriptions.push(localVideoSub, localAudioSub);
+  }
+
+  private setupRemoteTrackSubscriptions(): void {
+    const remoteVideoSub = this.setupRemoteVideoSubscription();
+    const remoteAudioSub = this.setupRemoteAudioSubscription();
+
+    this.subscriptions.push(remoteVideoSub, remoteAudioSub);
+  }
+
+  private setupRemoteVideoSubscription(): Subscription {
+    return this.videocallService.remoteVideoTracks$.subscribe((tracks) => {
+      console.log(
+        `Remote video tracks updated for ${this.userName}. Available tracks:`,
+        Array.from(tracks.keys())
+      );
+
+      const track =
+        this.getParticipantTrack(tracks) || this.getFirstAvailableTrack(tracks);
+
+      if (track && this.videoElement) {
+        if (this.participantIdentity) {
+          console.log(
+            `Found video track for participant ${this.participantIdentity}`
+          );
+        } else {
+          console.log('Using first available remote video track');
+        }
+        this.attachVideoTrack(track);
+      } else if (this.participantIdentity) {
+        console.log(
+          `No video track found for participant ${this.participantIdentity}`
+        );
+      }
+    });
+  }
+
+  private setupRemoteAudioSubscription(): Subscription {
+    return this.videocallService.remoteAudioTracks$.subscribe((tracks) => {
+      console.log(
+        `Remote audio tracks updated for ${this.userName}. Available tracks:`,
+        Array.from(tracks.keys())
+      );
+
+      const track =
+        this.getParticipantTrack(tracks) || this.getFirstAvailableTrack(tracks);
+
+      if (track && this.audioElement) {
+        if (this.participantIdentity) {
+          console.log(
+            `Found audio track for participant ${this.participantIdentity}`
+          );
+        } else {
+          console.log('Using first available remote audio track');
+        }
+        this.attachAudioTrack(track);
+      } else if (this.participantIdentity) {
+        console.log(
+          `No audio track found for participant ${this.participantIdentity}`
+        );
+      }
+    });
+  }
+
+  private getParticipantTrack<T>(tracks: Map<string, T>): T | undefined {
+    return this.participantIdentity
+      ? tracks.get(this.participantIdentity)
+      : undefined;
+  }
+
+  private getFirstAvailableTrack<T>(tracks: Map<string, T>): T | undefined {
+    return Array.from(tracks.values())[0];
+  }
+
+  ngAfterViewInit() {
+    this.attachExistingTracks();
+  }
+
+  private attachExistingTracks(): void {
+    if (this.isLocalUser) {
+      this.attachExistingLocalTracks();
+    } else {
+      this.attachExistingRemoteTracks();
+    }
+  }
+
+  private attachExistingLocalTracks(): void {
+    const localVideoTrack = this.videocallService.getLocalVideoTrack();
+    if (localVideoTrack) {
+      this.attachVideoTrack(localVideoTrack);
+    }
+
+    const localAudioTrack = this.videocallService.getLocalAudioTrack();
+    if (localAudioTrack) {
+      this.attachAudioTrack(localAudioTrack);
+    }
+  }
+
+  private attachExistingRemoteTracks(): void {
+    const remoteVideoTracks = this.videocallService.getRemoteVideoTracks();
+    const remoteAudioTracks = this.videocallService.getRemoteAudioTracks();
+
+    this.attachExistingRemoteTracksByType(remoteVideoTracks, 'video');
+    this.attachExistingRemoteTracksByType(remoteAudioTracks, 'audio');
+  }
+
+  private attachExistingRemoteTracksByType<
+    T extends RemoteVideoTrack | RemoteAudioTrack
+  >(tracks: Map<string, T>, trackType: 'video' | 'audio'): void {
+    const track =
+      this.getParticipantTrack(tracks) || this.getFirstAvailableTrack(tracks);
+
+    if (track) {
+      if (trackType === 'video') {
+        this.attachVideoTrack(track as RemoteVideoTrack);
+      } else {
+        this.attachAudioTrack(track as RemoteAudioTrack);
       }
     }
   }
@@ -112,16 +201,45 @@ export class UserCallComponent implements OnInit, OnDestroy, AfterViewInit {
     this.subscriptions.forEach((sub) => sub.unsubscribe());
   }
 
-  private attachVideoTrack(track: LocalVideoTrack | RemoteVideoTrack) {
-    if (this.videoElement?.nativeElement) {
+  private attachVideoTrack(track: LocalVideoTrack | RemoteVideoTrack): void {
+    if (!this.videoElement?.nativeElement) {
+      console.warn(`Video element not available for ${this.userName}`);
+      return;
+    }
+
+    try {
       console.log(
         `Attaching video track for ${
           this.isLocalUser ? 'local' : 'remote'
         } user: ${this.userName}`
       );
       track.attach(this.videoElement.nativeElement);
-    } else {
-      console.warn(`Video element not available for ${this.userName}`);
+    } catch (error) {
+      console.error(
+        `Failed to attach video track for ${this.userName}:`,
+        error
+      );
+    }
+  }
+
+  private attachAudioTrack(track: LocalAudioTrack | RemoteAudioTrack): void {
+    if (!this.audioElement?.nativeElement) {
+      console.warn(`Audio element not available for ${this.userName}`);
+      return;
+    }
+
+    try {
+      console.log(
+        `Attaching audio track for ${
+          this.isLocalUser ? 'local' : 'remote'
+        } user: ${this.userName}`
+      );
+      track.attach(this.audioElement.nativeElement);
+    } catch (error) {
+      console.error(
+        `Failed to attach audio track for ${this.userName}:`,
+        error
+      );
     }
   }
 }

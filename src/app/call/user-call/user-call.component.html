@@ -13,6 +13,8 @@
       muted
       playsinline
     ></video>
+    <!-- Audio element for remote users (local audio should be muted to avoid echo) -->
+    <audio #audioElement *ngIf="!isLocalUser" autoplay playsinline></audio>
     <span
       *ngIf="!isCameraOn"
       class="absolute inset-0 flex items-center justify-center text-gray-600 text-xl bg-gray-300"
