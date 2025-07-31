@@ -72,7 +72,6 @@ export class VideocallService {
       }
 
       const data = await response.json();
-      console.log('Health check response:', data);
       return data;
     } catch (error) {
       console.error('Health check failed:', error);
@@ -111,11 +110,6 @@ export class VideocallService {
         token: roomResponse.token,
       };
 
-      console.log(
-        'Created and connected to LiveKit room:',
-        roomResponse.room_id
-      );
-
       // After connecting, sync existing participants and their tracks
       this.syncExistingParticipants();
     } catch (error) {
@@ -140,8 +134,6 @@ export class VideocallService {
         token: '', // Token is handled internally by RoomConnectionService
       };
 
-      console.log('Connected to LiveKit room:', callId);
-
       // After connecting, sync existing participants and their tracks
       this.syncExistingParticipants();
     } catch (error) {
@@ -160,9 +152,6 @@ export class VideocallService {
 
       // Enable camera and microphone
       await localParticipant.enableCameraAndMicrophone();
-
-      // The tracks will be automatically updated through event listeners
-      console.log('Video and audio publishing enabled');
     } catch (error) {
       console.error('Error publishing video and audio:', error);
       throw error;

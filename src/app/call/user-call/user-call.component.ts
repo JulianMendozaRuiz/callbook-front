@@ -87,54 +87,22 @@ export class UserCallComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private setupRemoteVideoSubscription(): Subscription {
     return this.videocallService.remoteVideoTracks$.subscribe((tracks) => {
-      console.log(
-        `Remote video tracks updated for ${this.userName}. Available tracks:`,
-        Array.from(tracks.keys())
-      );
-
       const track =
         this.getParticipantTrack(tracks) || this.getFirstAvailableTrack(tracks);
 
       if (track && this.videoElement) {
-        if (this.participantIdentity) {
-          console.log(
-            `Found video track for participant ${this.participantIdentity}`
-          );
-        } else {
-          console.log('Using first available remote video track');
-        }
         this.attachVideoTrack(track);
-      } else if (this.participantIdentity) {
-        console.log(
-          `No video track found for participant ${this.participantIdentity}`
-        );
       }
     });
   }
 
   private setupRemoteAudioSubscription(): Subscription {
     return this.videocallService.remoteAudioTracks$.subscribe((tracks) => {
-      console.log(
-        `Remote audio tracks updated for ${this.userName}. Available tracks:`,
-        Array.from(tracks.keys())
-      );
-
       const track =
         this.getParticipantTrack(tracks) || this.getFirstAvailableTrack(tracks);
 
       if (track && this.audioElement) {
-        if (this.participantIdentity) {
-          console.log(
-            `Found audio track for participant ${this.participantIdentity}`
-          );
-        } else {
-          console.log('Using first available remote audio track');
-        }
         this.attachAudioTrack(track);
-      } else if (this.participantIdentity) {
-        console.log(
-          `No audio track found for participant ${this.participantIdentity}`
-        );
       }
     });
   }
@@ -207,11 +175,6 @@ export class UserCallComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     try {
-      console.log(
-        `Attaching video track for ${
-          this.isLocalUser ? 'local' : 'remote'
-        } user: ${this.userName}`
-      );
       track.attach(this.videoElement.nativeElement);
     } catch (error) {
       console.error(
@@ -228,11 +191,6 @@ export class UserCallComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     try {
-      console.log(
-        `Attaching audio track for ${
-          this.isLocalUser ? 'local' : 'remote'
-        } user: ${this.userName}`
-      );
       track.attach(this.audioElement.nativeElement);
     } catch (error) {
       console.error(

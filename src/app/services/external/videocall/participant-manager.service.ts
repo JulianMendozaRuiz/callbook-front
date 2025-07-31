@@ -21,14 +21,12 @@ export class ParticipantManagerService {
   }
 
   private handleParticipantConnected(participant: Participant): void {
-    console.log('Participant connected:', participant.identity);
     const currentParticipants = this.participants$.value;
     currentParticipants.set(participant.identity, participant);
     this.participants$.next(new Map(currentParticipants));
   }
 
   private handleParticipantDisconnected(participant: Participant): void {
-    console.log('Participant disconnected:', participant.identity);
     const currentParticipants = this.participants$.value;
     currentParticipants.delete(participant.identity);
     this.participants$.next(new Map(currentParticipants));
@@ -40,7 +38,6 @@ export class ParticipantManagerService {
     const existingParticipants = new Map<string, Participant>();
 
     room.remoteParticipants.forEach((participant, identity) => {
-      console.log('Found existing participant:', identity);
       existingParticipants.set(identity, participant);
     });
 

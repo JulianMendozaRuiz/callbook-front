@@ -61,8 +61,6 @@ export class TrackManagerService {
     publication: any,
     participant: Participant
   ): void {
-    console.log(`Track subscribed: ${track.kind} from ${participant.identity}`);
-
     if (track.kind === 'video') {
       this.updateRemoteVideoTrack(
         participant.identity,
@@ -83,10 +81,6 @@ export class TrackManagerService {
     publication: any,
     participant: Participant
   ): void {
-    console.log(
-      `Track unsubscribed: ${track.kind} from ${participant.identity}`
-    );
-
     if (track.kind === 'video') {
       this.removeRemoteVideoTrack(participant.identity);
     }
@@ -103,10 +97,6 @@ export class TrackManagerService {
     const currentTracks = this.remoteVideoTracks$.value;
     currentTracks.set(identity, track);
     this.remoteVideoTracks$.next(new Map(currentTracks));
-    console.log(
-      'Updated remote video tracks:',
-      Array.from(currentTracks.keys())
-    );
   }
 
   private updateRemoteAudioTrack(
@@ -116,30 +106,18 @@ export class TrackManagerService {
     const currentTracks = this.remoteAudioTracks$.value;
     currentTracks.set(identity, track);
     this.remoteAudioTracks$.next(new Map(currentTracks));
-    console.log(
-      'Updated remote audio tracks:',
-      Array.from(currentTracks.keys())
-    );
   }
 
   private removeRemoteVideoTrack(identity: string): void {
     const currentTracks = this.remoteVideoTracks$.value;
     currentTracks.delete(identity);
     this.remoteVideoTracks$.next(new Map(currentTracks));
-    console.log(
-      'Updated remote video tracks:',
-      Array.from(currentTracks.keys())
-    );
   }
 
   private removeRemoteAudioTrack(identity: string): void {
     const currentTracks = this.remoteAudioTracks$.value;
     currentTracks.delete(identity);
     this.remoteAudioTracks$.next(new Map(currentTracks));
-    console.log(
-      'Updated remote audio tracks:',
-      Array.from(currentTracks.keys())
-    );
   }
 
   async enableCameraAndMicrophone(room: Room): Promise<void> {
@@ -181,7 +159,6 @@ export class TrackManagerService {
       // Check for existing video tracks
       participant.videoTrackPublications.forEach((publication) => {
         if (publication.track && publication.isSubscribed) {
-          console.log('Found existing video track for:', identity);
           existingVideoTracks.set(
             identity,
             publication.track as RemoteVideoTrack
@@ -192,7 +169,6 @@ export class TrackManagerService {
       // Check for existing audio tracks
       participant.audioTrackPublications.forEach((publication) => {
         if (publication.track && publication.isSubscribed) {
-          console.log('Found existing audio track for:', identity);
           existingAudioTracks.set(
             identity,
             publication.track as RemoteAudioTrack
@@ -224,7 +200,6 @@ export class TrackManagerService {
 
       // Update local video track observable
       this.captureLocalTracks(localParticipant);
-      console.log('Video enabled for local participant');
     } catch (error) {
       console.error('Error enabling video:', error);
       throw error;
@@ -242,7 +217,6 @@ export class TrackManagerService {
 
       // Clear local video track observable
       this.localVideoTrack$.next(null);
-      console.log('Video disabled for local participant');
     } catch (error) {
       console.error('Error disabling video:', error);
       throw error;
@@ -260,7 +234,6 @@ export class TrackManagerService {
 
       // Update local audio track observable
       this.captureLocalTracks(localParticipant);
-      console.log('Audio enabled for local participant');
     } catch (error) {
       console.error('Error enabling audio:', error);
       throw error;
@@ -278,7 +251,6 @@ export class TrackManagerService {
 
       // Clear local audio track observable
       this.localAudioTrack$.next(null);
-      console.log('Audio disabled for local participant');
     } catch (error) {
       console.error('Error disabling audio:', error);
       throw error;

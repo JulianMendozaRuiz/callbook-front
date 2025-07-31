@@ -39,11 +39,23 @@
         {{ isCameraOn ? "Turn off camera" : "Turn on camera" }}
       </button>
       <button
+        (click)="toggleTranscription()"
+        class="px-6 py-2 text-white rounded-lg hover:cursor-pointer transition-colors"
+        [class.bg-green-500]="isTranscriptionActive"
+        [class.hover:bg-green-600]="isTranscriptionActive"
+        [class.active:bg-green-700]="isTranscriptionActive"
+        [class.bg-gray-500]="!isTranscriptionActive"
+        [class.hover:bg-gray-600]="!isTranscriptionActive"
+        [class.active:bg-gray-700]="!isTranscriptionActive"
+      >
+        {{ isTranscriptionActive ? "Stop" : "Start" }} Live Transcription
+      </button>
+      <!-- <button
         (click)="toggleTranscript()"
         class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 hover:cursor-pointer active:bg-blue-700 transition-colors"
       >
         {{ showTranscript ? "Hide" : "Show" }} transcript
-      </button>
+      </button> -->
     </div>
 
     <!-- Users Grid -->

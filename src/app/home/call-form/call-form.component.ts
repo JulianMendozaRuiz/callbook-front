@@ -27,12 +27,7 @@ export class CallFormComponent implements OnInit {
   }
 
   async createCall() {
-    // Logic to create a call
-    console.log('Creating call...');
-    console.log('callform', this.callForm);
-
     if (this.callForm.get('username')?.valid) {
-      // Only need valid username to create a new call
       const username = this.callForm.get('username')?.value;
       try {
         // Create and join the room in one operation
@@ -49,10 +44,6 @@ export class CallFormComponent implements OnInit {
   }
 
   async joinCall() {
-    // Logic to join a call
-    console.log('Joining call...');
-    console.log('callform', this.callForm);
-
     // For joining, we need both valid username AND valid call ID
     if (
       this.callForm.get('username')?.valid &&

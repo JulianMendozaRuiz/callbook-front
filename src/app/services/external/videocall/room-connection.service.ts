@@ -38,7 +38,6 @@ export class RoomConnectionService {
 
   async connectToRoom(callId: string, username: string): Promise<Room> {
     if (this._room?.state === 'connected') {
-      console.log('Already connected to a room, disconnecting first');
       await this.disconnectFromRoom();
     }
 
@@ -62,7 +61,6 @@ export class RoomConnectionService {
       await this._room.connect(url, token);
 
       this.roomState$.next('connected');
-      console.log('Connected to room:', callId);
 
       return this._room;
     } catch (error) {
@@ -75,7 +73,6 @@ export class RoomConnectionService {
 
   async disconnectFromRoom(): Promise<void> {
     if (this._room) {
-      console.log('Disconnecting from room');
       await this._room.disconnect();
       this._room = null;
     }
