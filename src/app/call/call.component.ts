@@ -3,6 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { VideocallService } from '../services/external/videocall/videocall.service';
 import { Subscription } from 'rxjs';
 import { Participant } from 'livekit-client';
+import { TranscriptionService } from '../services/external/transcription/transcription.service';
 
 interface TranscriptMessage {
   sender: string;
@@ -30,7 +31,8 @@ export class CallComponent implements OnInit, OnDestroy {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private videocallService: VideocallService
+    private videocallService: VideocallService,
+    private transcriptionService: TranscriptionService
   ) {}
 
   async ngOnInit() {
@@ -106,9 +108,13 @@ export class CallComponent implements OnInit, OnDestroy {
     this.transcript.push(message);
   }
 
-  private setupTranscriptListeners() {
+  private async setupTranscriptListeners() {
     // TODO: Integrate with real transcription service
     // This is a placeholder for future transcription integration
+
+    const transcriptionToken =
+      await this.transcriptionService.getTranscriptionToken();
+    console.log('Transcription Token:', transcriptionToken);
 
     // For now, we can simulate transcript updates when participants join/leave
     const participantsSub = this.videocallService.participants$.subscribe(

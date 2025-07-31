@@ -59,8 +59,6 @@ export class VideocallService {
    * @returns Promise<any>
    */
   async healthCheck(): Promise<any> {
-    console.log('base url', this.baseUrl);
-
     try {
       const response = await fetch(`${this.baseUrl}/`, {
         method: 'GET',
