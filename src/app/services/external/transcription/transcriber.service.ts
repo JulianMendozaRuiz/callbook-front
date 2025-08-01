@@ -17,6 +17,17 @@ export class TranscriberService {
   private currentClient: AssemblyAI | null = null;
   private currentToken: string | null = null;
 
+  // Track recent participant activity to better associate transcriptions
+  private recentParticipantActivity: Map<
+    string,
+    {
+      participantId: string;
+      participantName: string;
+      lastActivity: number;
+    }
+  > = new Map();
+  private readonly ACTIVITY_TIMEOUT_MS = 2000; // 2 seconds
+
   private sampleRate = 16000; // Default sample rate for AssemblyAI
   private formatTurns = true; // Default to formatting turns
 
@@ -95,10 +106,13 @@ export class TranscriberService {
       }
 
       if (isFinal) {
+        // Determine the most likely participant for this transcription
+        const participantInfo = this.getMostLikelyParticipant();
+
         const enrichedTurn = {
           ...turn,
-          participantId: this.currentParticipantId,
-          participantName: this.currentParticipantName,
+          participantId: participantInfo.participantId,
+          participantName: participantInfo.participantName,
           isFinal: true,
         };
 
@@ -157,6 +171,88 @@ export class TranscriberService {
   setCurrentParticipant(participantId: string, participantName: string): void {
     this.currentParticipantId = participantId;
     this.currentParticipantName = participantName;
+
+    // Track recent activity for this participant
+    this.recentParticipantActivity.set(participantId, {
+      participantId,
+      participantName,
+      lastActivity: Date.now(),
+    });
+
+    // Clean up old activity records
+    const now = Date.now();
+    for (const [id, activity] of this.recentParticipantActivity.entries()) {
+      if (now - activity.lastActivity > this.ACTIVITY_TIMEOUT_MS) {
+        this.recentParticipantActivity.delete(id);
+      }
+    }
+  }
+
+  private getMostLikelyParticipant(): {
+    participantId: string;
+    participantName: string;
+  } {
+    // If we have recent activity, find the participant with the most recent activity
+    // that's not the local participant (since local audio is processed more frequently)
+    const now = Date.now();
+    let mostRecentActivity: {
+      participantId: string;
+      participantName: string;
+      lastActivity: number;
+    } | null = null;
+    let mostRecentNonLocalActivity: {
+      participantId: string;
+      participantName: string;
+      lastActivity: number;
+    } | null = null;
+
+    for (const activity of this.recentParticipantActivity.values()) {
+      if (now - activity.lastActivity <= this.ACTIVITY_TIMEOUT_MS) {
+        if (
+          !mostRecentActivity ||
+          activity.lastActivity > mostRecentActivity.lastActivity
+        ) {
+          mostRecentActivity = activity;
+        }
+
+        // Track non-local activity separately
+        if (
+          activity.participantId !== 'local' &&
+          (!mostRecentNonLocalActivity ||
+            activity.lastActivity > mostRecentNonLocalActivity.lastActivity)
+        ) {
+          mostRecentNonLocalActivity = activity;
+        }
+      }
+    }
+
+    // Prefer non-local participants if they've been active recently
+    if (
+      mostRecentNonLocalActivity &&
+      (!mostRecentActivity ||
+        mostRecentActivity.lastActivity -
+          mostRecentNonLocalActivity.lastActivity <
+          500)
+    ) {
+      return {
+        participantId: mostRecentNonLocalActivity.participantId,
+        participantName: mostRecentNonLocalActivity.participantName,
+      };
+    }
+
+    // Fall back to most recent activity or current participant
+    if (mostRecentActivity) {
+      return {
+        participantId: mostRecentActivity.participantId,
+        participantName: mostRecentActivity.participantName,
+      };
+    }
+
+    // Final fallback to current participant
+    return {
+      participantId: this.currentParticipantId || 'unknown',
+      participantName: this.currentParticipantName || 'Speaker',
+    };
   }
 
   async waitForConnection(timeoutMs: number = 3000): Promise<void> {
@@ -202,6 +298,7 @@ export class TranscriberService {
         this.currentClient = null;
         this.currentToken = null;
         this.reconnectionAttempts = 0;
+        this.recentParticipantActivity.clear(); // Clear activity tracking
       }
     }
   }

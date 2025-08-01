@@ -5,6 +5,8 @@ import { TokenManagementService } from './token-manager.service';
 import { ClientManagerService } from './client-manager.service';
 import { TranscriberService } from './transcriber.service';
 import { AudioProcessorService } from './audio-processor.service';
+import { MultiTranscriberService } from './multi-transcriber.service';
+import { MultiAudioProcessorService } from './multi-audio-processor.service';
 import { TranscriptionResultsService } from './transcription-results.service';
 import { TranscriptionResult } from '../../../shared/models/transcription';
 import { Room } from 'livekit-client';
@@ -15,17 +17,46 @@ import { Room } from 'livekit-client';
 export class TranscriptionService {
   private isTranscribing = false;
   private transcriptionSubscription: Subscription | null = null;
+  private useMultiTranscriber = true; // Feature flag to switch between approaches
 
   constructor(
     private tokenManagementService: TokenManagementService,
     private clientManagerService: ClientManagerService,
     private transcriberService: TranscriberService,
     private audioProcessorService: AudioProcessorService,
+    private multiTranscriberService: MultiTranscriberService,
+    private multiAudioProcessorService: MultiAudioProcessorService,
     private transcriptionResultsService: TranscriptionResultsService
   ) {}
 
   get transcriptionResults(): Observable<TranscriptionResult[]> {
     return this.transcriptionResultsService.transcriptionResults;
+  }
+
+  // Method to switch between single and multi-transcriber approaches
+  setUseMultiTranscriber(useMulti: boolean): void {
+    this.useMultiTranscriber = useMulti;
+  }
+
+  getCurrentTranscriberMode(): string {
+    return this.useMultiTranscriber
+      ? 'multi-transcriber'
+      : 'single-transcriber';
+  }
+
+  // Debug methods
+  getActiveTranscribers(): string[] {
+    if (this.useMultiTranscriber) {
+      return this.multiTranscriberService.getActiveTranscribers();
+    }
+    return this.transcriberService.isConnected ? ['single-transcriber'] : [];
+  }
+
+  getActiveAudioProcessors(): string[] {
+    if (this.useMultiTranscriber) {
+      return this.multiAudioProcessorService.getActiveProcessors();
+    }
+    return []; // Legacy audio processor doesn't expose this info
   }
 
   async getTranscriptionToken(): Promise<any> {
@@ -57,10 +88,14 @@ export class TranscriptionService {
       throw new Error('API Client is not initialized');
     }
 
-    // Close any existing transcriber first
-    await this.transcriberService.closeTranscriber();
-
-    await this.transcriberService.createTranscriber(client, token);
+    if (this.useMultiTranscriber) {
+      // Initialize the multi-transcriber service
+      await this.multiTranscriberService.initializeClient(client, token);
+    } else {
+      // Close any existing transcriber first (legacy single transcriber)
+      await this.transcriberService.closeTranscriber();
+      await this.transcriberService.createTranscriber(client, token);
+    }
   }
 
   async startTranscriptionForCall(room: Room): Promise<void> {
@@ -72,7 +107,11 @@ export class TranscriptionService {
 
     this.setupTranscriptionEventHandlers();
 
-    await this.audioProcessorService.startProcessingRoom(room);
+    if (this.useMultiTranscriber) {
+      await this.multiAudioProcessorService.startProcessingRoom(room);
+    } else {
+      await this.audioProcessorService.startProcessingRoom(room);
+    }
 
     this.isTranscribing = true;
   }
@@ -82,11 +121,15 @@ export class TranscriptionService {
       return;
     }
 
-    // Stop audio processing using delegated service
-    await this.audioProcessorService.stopProcessingRoom();
-
-    // Stop transcriber using delegated service
-    await this.transcriberService.closeTranscriber();
+    if (this.useMultiTranscriber) {
+      // Stop multi-audio processing and close all transcribers
+      await this.multiAudioProcessorService.stopProcessingRoom();
+    } else {
+      // Stop audio processing using delegated service (legacy)
+      await this.audioProcessorService.stopProcessingRoom();
+      // Stop transcriber using delegated service (legacy)
+      await this.transcriberService.closeTranscriber();
+    }
 
     // Unsubscribe from events
     if (this.transcriptionSubscription) {
@@ -116,21 +159,40 @@ export class TranscriptionService {
   }
 
   private setupTranscriptionEventHandlers(): void {
-    // Subscribe to transcription events from TranscriberService
-    this.transcriptionSubscription =
-      this.transcriberService.transcriptionEvents.subscribe((event) => {
-        if (event.type === 'turn' && event.data.transcript) {
-          const result: TranscriptionResult = {
-            text: event.data.transcript,
-            participantId: event.data.participantId || 'unknown',
-            participantName: event.data.participantName || 'Speaker',
-            timestamp: new Date(),
-            isFinal: true,
-          };
+    if (this.useMultiTranscriber) {
+      // Subscribe to transcription events from MultiTranscriberService
+      this.transcriptionSubscription =
+        this.multiTranscriberService.transcriptionEvents.subscribe((event) => {
+          if (event.type === 'turn' && event.data.transcript) {
+            const result: TranscriptionResult = {
+              text: event.data.transcript,
+              participantId: event.data.participantId || 'unknown',
+              participantName: event.data.participantName || 'Speaker',
+              timestamp: new Date(),
+              isFinal: true,
+            };
 
-          // Use delegated service to add result
-          this.transcriptionResultsService.addTranscriptionResult(result);
-        }
-      });
+            // Use delegated service to add result
+            this.transcriptionResultsService.addTranscriptionResult(result);
+          }
+        });
+    } else {
+      // Subscribe to transcription events from TranscriberService (legacy)
+      this.transcriptionSubscription =
+        this.transcriberService.transcriptionEvents.subscribe((event) => {
+          if (event.type === 'turn' && event.data.transcript) {
+            const result: TranscriptionResult = {
+              text: event.data.transcript,
+              participantId: event.data.participantId || 'unknown',
+              participantName: event.data.participantName || 'Speaker',
+              timestamp: new Date(),
+              isFinal: true,
+            };
+
+            // Use delegated service to add result
+            this.transcriptionResultsService.addTranscriptionResult(result);
+          }
+        });
+    }
   }
 }

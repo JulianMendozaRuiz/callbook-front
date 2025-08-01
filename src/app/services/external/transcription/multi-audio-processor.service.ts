@@ -6,24 +6,23 @@ import {
   Participant,
   Track,
 } from 'livekit-client';
-import { TranscriberService } from './transcriber.service';
+import { MultiTranscriberService } from './multi-transcriber.service';
 
 @Injectable({
   providedIn: 'root',
 })
-export class AudioProcessorService {
+export class MultiAudioProcessorService {
   private audioContext: AudioContext | null = null;
-  private processors: Map<string, AudioWorkletNode | AnalyserNode> = new Map();
+  private processors: Map<string, ScriptProcessorNode> = new Map();
   private audioBuffers: Map<string, Float32Array[]> = new Map();
-  private participantNames: Map<string, string> = new Map(); // Store participant names
 
-  constructor(private transcriberService: TranscriberService) {}
+  constructor(private multiTranscriberService: MultiTranscriberService) {}
 
   async startProcessingRoom(room: Room): Promise<void> {
-    // Start processing audio from local participant
+    // Create transcribers and start processing audio from local participant
     await this.processLocalAudio(room);
 
-    // Start processing audio from existing remote participants
+    // Create transcribers and start processing audio from existing remote participants
     room.remoteParticipants.forEach((participant) => {
       this.processRemoteParticipantAudio(participant);
     });
@@ -42,10 +41,7 @@ export class AudioProcessorService {
   async stopProcessingRoom(): Promise<void> {
     // Stop all audio processors
     this.processors.forEach((processor, participantId) => {
-      // Clear audio processing handlers for ScriptProcessorNodes
-      if ('onaudioprocess' in processor) {
-        (processor as unknown as ScriptProcessorNode).onaudioprocess = null;
-      }
+      processor.onaudioprocess = null;
       processor.disconnect();
     });
     this.processors.clear();
@@ -53,8 +49,8 @@ export class AudioProcessorService {
     // Clear audio buffers
     this.audioBuffers.clear();
 
-    // Clear participant names
-    this.participantNames.clear();
+    // Close all transcribers
+    await this.multiTranscriberService.closeAllTranscribers();
 
     // Close audio context
     if (this.audioContext) {
@@ -71,10 +67,21 @@ export class AudioProcessorService {
     )?.track as LocalAudioTrack;
 
     if (audioTrack && audioTrack.mediaStreamTrack) {
+      const participantId = 'local';
+      const participantName =
+        localParticipant.name || localParticipant.identity || 'You';
+
+      // Create dedicated transcriber for local participant
+      await this.multiTranscriberService.createTranscriberForParticipant(
+        participantId,
+        participantName,
+        true // isLocal = true
+      );
+
       await this.processAudioTrack(
         audioTrack.mediaStreamTrack,
-        'local',
-        localParticipant.name || localParticipant.identity || 'You'
+        participantId,
+        participantName
       );
     }
   }
@@ -86,10 +93,20 @@ export class AudioProcessorService {
       if (publication.track && publication.isSubscribed) {
         const audioTrack = publication.track as RemoteAudioTrack;
         if (audioTrack.mediaStreamTrack) {
+          const participantId = participant.identity;
+          const participantName = participant.name || participant.identity;
+
+          // Create dedicated transcriber for this remote participant
+          await this.multiTranscriberService.createTranscriberForParticipant(
+            participantId,
+            participantName,
+            false // isLocal = false
+          );
+
           await this.processAudioTrack(
             audioTrack.mediaStreamTrack,
-            participant.identity,
-            participant.name || participant.identity
+            participantId,
+            participantName
           );
         }
       }
@@ -117,11 +134,9 @@ export class AudioProcessorService {
     source.connect(scriptProcessor);
     scriptProcessor.connect(this.audioContext.destination);
 
-    // Store the script processor and participant info for transcription
-    this.processors.set(participantId, scriptProcessor as any);
+    // Store the script processor
+    this.processors.set(participantId, scriptProcessor);
 
-    // Store participant name for later use in transcription
-    this.participantNames.set(participantId, participantName);
     if (!this.audioBuffers.has(participantId)) {
       this.audioBuffers.set(participantId, []);
     }
@@ -143,10 +158,11 @@ export class AudioProcessorService {
 
     scriptProcessor.onaudioprocess = (audioProcessingEvent) => {
       if (
-        !this.transcriberService.transcriber ||
-        !this.processors.has(participantId)
+        !this.multiTranscriberService.hasTranscriberForParticipant(
+          participantId
+        )
       ) {
-        // Disconnect if transcriber is closed or processor removed
+        // Disconnect if transcriber is closed or removed
         scriptProcessor.disconnect();
         return;
       }
@@ -176,29 +192,16 @@ export class AudioProcessorService {
         int16Data[i] = sample * 32767;
       }
 
-      // Set current participant context before sending audio (only when there's actual audio)
-      this.transcriberService.setCurrentParticipant(
-        participantId,
-        participantName
-      );
-
-      // Send audio chunk to AssemblyAI
+      // Send audio chunk to the dedicated transcriber for this participant
       try {
-        this.transcriberService.transcriber!.sendAudio(int16Data.buffer);
+        this.multiTranscriberService.sendAudioToParticipant(
+          participantId,
+          int16Data.buffer
+        );
         audioChunkCount++;
 
         if (!firstAudioSent) {
           firstAudioSent = true;
-        }
-
-        // Log every 16 chunks (~1 second at 64ms per chunk) to confirm continuous sending
-        if (audioChunkCount % 16 === 0) {
-          // Check for connection issues
-          if (!this.transcriberService.isConnected) {
-            console.warn(
-              `⚠️ Connection lost after ${audioChunkCount} chunks - transcriber may be reconnecting`
-            );
-          }
         }
       } catch (error) {
         console.error(
@@ -208,13 +211,11 @@ export class AudioProcessorService {
       }
     };
   }
+
   private stopProcessingParticipantAudio(participantId: string): void {
     const processor = this.processors.get(participantId);
     if (processor) {
-      // For ScriptProcessorNode, we need to clear the onaudioprocess handler and disconnect
-      if ('onaudioprocess' in processor) {
-        (processor as unknown as ScriptProcessorNode).onaudioprocess = null;
-      }
+      processor.onaudioprocess = null;
       processor.disconnect();
       this.processors.delete(participantId);
     }
@@ -222,15 +223,11 @@ export class AudioProcessorService {
     // Clear audio buffer for this participant
     this.audioBuffers.delete(participantId);
 
-    // Clear participant name
-    this.participantNames.delete(participantId);
+    // Close the transcriber for this participant
+    this.multiTranscriberService.closeTranscriberForParticipant(participantId);
   }
 
-  getParticipantName(participantId: string): string {
-    return this.participantNames.get(participantId) || 'Unknown Speaker';
-  }
-
-  getAllParticipantNames(): Map<string, string> {
-    return new Map(this.participantNames);
+  getActiveProcessors(): string[] {
+    return Array.from(this.processors.keys());
   }
 }
