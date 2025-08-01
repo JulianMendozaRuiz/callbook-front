@@ -1,6 +1,5 @@
 import { Injectable } from '@angular/core';
 import { Observable, Subscription } from 'rxjs';
-import { AssemblyAI } from 'assemblyai';
 import { TokenManagementService } from './token-manager.service';
 import { ClientManagerService } from './client-manager.service';
 import { TranscriberService } from './transcriber.service';

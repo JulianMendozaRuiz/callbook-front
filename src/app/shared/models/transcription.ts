@@ -23,5 +23,6 @@ export interface TranscriptionEvent {
 export interface TranscriptMessage {
   sender: string;
   text: string;
+  translation?: string; // Optional translation field
   timestamp: Date;
 }

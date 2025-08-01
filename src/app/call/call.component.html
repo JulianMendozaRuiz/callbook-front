@@ -50,12 +50,23 @@
       >
         {{ isTranscriptionActive ? "Stop" : "Start" }} Live Transcription
       </button>
-      <!-- <button
-        (click)="toggleTranscript()"
-        class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 hover:cursor-pointer active:bg-blue-700 transition-colors"
+      <button
+        (click)="toggleTranslation()"
+        [disabled]="!showTranscript"
+        class="px-6 py-2 text-white rounded-lg transition-colors"
+        [class.hover:cursor-pointer]="showTranscript"
+        [class.bg-green-500]="isTranslationVisible"
+        [class.hover:bg-green-600]="isTranslationVisible && showTranscript"
+        [class.active:bg-green-700]="isTranslationVisible && showTranscript"
+        [class.bg-gray-500]="!isTranslationVisible && showTranscript"
+        [class.hover:bg-gray-600]="!isTranslationVisible && showTranscript"
+        [class.active:bg-gray-700]="!isTranslationVisible && showTranscript"
+        [class.bg-gray-400]="!showTranscript"
+        [class.cursor-not-allowed]="!showTranscript"
+        [class.hover:cursor-not-allowed]="!showTranscript"
       >
-        {{ showTranscript ? "Hide" : "Show" }} transcript
-      </button> -->
+        {{ isTranslationVisible ? "Hide" : "Show" }} Translation
+      </button>
     </div>
 
     <!-- Users Grid -->
@@ -94,18 +105,38 @@
       </app-user-call>
     </div>
 
-    <!-- Transcript Section -->
-    <div
-      *ngIf="showTranscript"
-      class="mt-8 p-4 bg-white rounded-lg shadow-md max-h-96 overflow-y-auto"
-    >
-      <h2 class="text-xl font-semibold mb-4">Transcript</h2>
-      <div *ngFor="let message of transcript" class="mb-2">
-        <strong>{{ message.sender }}:</strong> {{ message.text }}
+    <!-- Transcript and Translation Sections -->
+    <div *ngIf="showTranscript" class="mt-8 flex space-x-4">
+      <!-- Transcript Section -->
+      <div
+        class="flex-1 p-4 bg-white rounded-lg shadow-md max-h-96 overflow-y-auto"
+      >
+        <h2 class="text-xl font-semibold mb-4">Transcript</h2>
+        <div *ngFor="let message of transcript" class="mb-2">
+          <strong>{{ message.sender }}:</strong> {{ message.text }}
+        </div>
+        <div *ngIf="transcript.length === 0" class="text-gray-500">
+          No messages yet. Start the conversation!
+        </div>
       </div>
-      <div *ngIf="transcript.length === 0" class="text-gray-500">
-        No messages yet. Start the conversation!
+
+      <!-- Translation Section -->
+      <div
+        *ngIf="showTranslation"
+        class="flex-1 p-4 bg-white rounded-lg shadow-md max-h-96 overflow-y-auto"
+      >
+        <h2 class="text-xl font-semibold mb-4">Translation</h2>
+        <div *ngFor="let message of transcript" class="mb-2">
+          <strong>{{ message.sender }}:</strong>
+          {{ message.translation || message.text }}
+        </div>
+        <div *ngIf="transcript.length === 0" class="text-gray-500">
+          No messages yet. Start the conversation!
+        </div>
       </div>
+
+      <!-- Placeholder when translation is hidden -->
+      <div *ngIf="!showTranslation" class="flex-1"></div>
     </div>
   </div>
 </div>

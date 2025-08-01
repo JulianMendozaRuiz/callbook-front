@@ -2,10 +2,12 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { VideocallService } from '../services/external/videocall/videocall.service';
 import { TranscriptionService } from '../services/external/transcription/transcription.service';
+import { TranslationService } from '../services/external/translation/translation.service';
 import {
   TranscriptionResult,
   TranscriptMessage,
 } from '../shared/models/transcription';
+import { TranslationRequest } from '../shared/models/translation';
 import { Subscription } from 'rxjs';
 import { Participant } from 'livekit-client';
 
@@ -18,6 +20,7 @@ import { Participant } from 'livekit-client';
 export class CallComponent implements OnInit, OnDestroy {
   callId: string = '';
   showTranscript: boolean = false;
+  showTranslation: boolean = false;
   currentUsername: string = '';
   remoteParticipants: Participant[] = [];
   transcript: TranscriptMessage[] = [];
@@ -26,13 +29,19 @@ export class CallComponent implements OnInit, OnDestroy {
   isTranscriptionActive: boolean = false;
   private processedTranscriptionIds: Set<string> = new Set();
 
+  // Translation settings
+  private readonly targetLanguage: string = 'es'; // Spanish as default target language
+  private readonly sourceLanguage: string = 'en'; // English as default source language
+  private readonly enableAutoTranslation: boolean = true; // Temporarily disabled until backend is ready
+
   private subscriptions: Subscription[] = [];
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private videocallService: VideocallService,
-    private transcriptionService: TranscriptionService
+    private transcriptionService: TranscriptionService,
+    private translationService: TranslationService
   ) {}
 
   async ngOnInit() {
@@ -53,10 +62,15 @@ export class CallComponent implements OnInit, OnDestroy {
     await this.videocallService.publishVideoAndAudio();
 
     // Initialize transcript with welcome message
-    this.addTranscriptMessage('System', `Welcome to call room: ${this.callId}`);
-    this.addTranscriptMessage(
+    await this.addTranscriptMessage(
       'System',
-      'Click "Start Live Transcription" to enable real-time speech-to-text'
+      `Welcome to call room: ${this.callId}`,
+      true
+    );
+    await this.addTranscriptMessage(
+      'System',
+      'Click "Start Live Transcription" to enable real-time speech-to-text',
+      true
     );
 
     // Set up transcription listeners (but don't auto-start transcription)
@@ -78,8 +92,13 @@ export class CallComponent implements OnInit, OnDestroy {
     this.router.navigate(['/']);
   }
 
-  toggleTranscript() {
-    this.showTranscript = !this.showTranscript;
+  toggleTranslation() {
+    this.showTranslation = !this.showTranslation;
+  }
+
+  // Getter to determine if translation is actually visible to the user
+  get isTranslationVisible(): boolean {
+    return this.showTranscript && this.showTranslation;
   }
 
   async toggleMic() {
@@ -108,12 +127,51 @@ export class CallComponent implements OnInit, OnDestroy {
     }
   }
 
-  private addTranscriptMessage(sender: string, text: string) {
+  private async addTranscriptMessage(
+    sender: string,
+    text: string,
+    skipTranslation: boolean = false
+  ) {
     const message: TranscriptMessage = {
       sender,
       text,
       timestamp: new Date(),
     };
+
+    // Always translate user messages (not system messages) unless explicitly skipped
+    if (!skipTranslation && sender !== 'System' && this.enableAutoTranslation) {
+      try {
+        const translationRequest: TranslationRequest = {
+          text: text,
+          source_language: this.sourceLanguage,
+          target_language: this.targetLanguage,
+        };
+
+        const translationResponse = await this.translationService.translate(
+          translationRequest
+        );
+        message.translation = translationResponse.translatedText;
+      } catch (error) {
+        console.error('Translation service error:', error);
+        // Don't block the message if translation fails
+        message.translation = undefined;
+
+        // Add a system message about translation service being unavailable (only once)
+        if (
+          !this.transcript.some((msg) =>
+            msg.text.includes('Translation service temporarily unavailable')
+          )
+        ) {
+          const systemMessage: TranscriptMessage = {
+            sender: 'System',
+            text: 'Translation service temporarily unavailable',
+            timestamp: new Date(),
+          };
+          this.transcript.push(systemMessage);
+        }
+      }
+    }
+
     this.transcript.push(message);
   }
 
@@ -132,7 +190,16 @@ export class CallComponent implements OnInit, OnDestroy {
 
               if (!this.processedTranscriptionIds.has(resultId)) {
                 this.processedTranscriptionIds.add(resultId);
-                this.addTranscriptMessage(result.participantName, result.text);
+                // Don't await here to avoid blocking the subscription
+                this.addTranscriptMessage(
+                  result.participantName,
+                  result.text
+                ).catch((error) => {
+                  console.error(
+                    'Error adding translated transcript message:',
+                    error
+                  );
+                });
               }
             }
           });
@@ -149,8 +216,11 @@ export class CallComponent implements OnInit, OnDestroy {
           const newParticipant = participantList[participantList.length - 1];
           this.addTranscriptMessage(
             'System',
-            `${newParticipant.name || newParticipant.identity} joined the call`
-          );
+            `${newParticipant.name || newParticipant.identity} joined the call`,
+            true
+          ).catch((error) => {
+            console.error('Error adding system message:', error);
+          });
         }
       }
     );
@@ -163,20 +233,29 @@ export class CallComponent implements OnInit, OnDestroy {
       this.showTranscript = false; // Hide transcript when stopping
       this.isTranscriptionActive = false;
       this.processedTranscriptionIds.clear(); // Clear processed IDs for fresh start
-      this.addTranscriptMessage('System', 'Live transcription stopped');
+      await this.addTranscriptMessage(
+        'System',
+        'Live transcription stopped',
+        true
+      );
     } else {
       if (this.videocallService.room) {
         try {
-          this.addTranscriptMessage('System', 'Starting live transcription...');
+          await this.addTranscriptMessage(
+            'System',
+            'Starting live transcription...',
+            true
+          );
 
           await this.transcriptionService.startTranscriptionForCall(
             this.videocallService.room
           );
           this.isTranscriptionActive = true;
           this.showTranscript = true; // Show transcript when starting
-          this.addTranscriptMessage(
+          await this.addTranscriptMessage(
             'System',
-            'Live transcription started successfully'
+            'Live transcription started successfully',
+            true
           );
         } catch (error) {
           console.error('Error starting transcription:', error);
@@ -196,11 +275,15 @@ export class CallComponent implements OnInit, OnDestroy {
             }
           }
 
-          this.addTranscriptMessage('System', errorMessage);
+          await this.addTranscriptMessage('System', errorMessage, true);
           this.isTranscriptionActive = false;
         }
       } else {
-        this.addTranscriptMessage('System', 'No active call to transcribe');
+        await this.addTranscriptMessage(
+          'System',
+          'No active call to transcribe',
+          true
+        );
       }
     }
   }
